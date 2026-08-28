@@ -6,12 +6,13 @@ Create the device in Doover with the **Raspberry Pi** device type before you con
 
 1. Add `https://github.com/ThomasCrund/doover-home-assistant` as a repository in the Home Assistant app store.
 2. Install **Doover Device**.
-3. Open the **Configuration** tab.
-4. Copy the `AGENT_ID` value to **Agent ID**.
-5. Copy the `ORGANISATION_ID` value to **Organisation ID**.
-6. Configure one credential method.
-7. Copy `DATA_API` and `DATA_WSS` from the provisioning data. Keep the defaults only when they match.
-8. Save the configuration and start the app.
+3. Open the **Info** tab and turn off **Protection mode**. The App Controller cannot use the host Docker API while protection mode is on.
+4. Open the **Configuration** tab.
+5. Copy the `AGENT_ID` value to **Agent ID**.
+6. Copy the `ORGANISATION_ID` value to **Organisation ID**.
+7. Configure one credential method.
+8. Copy `DATA_API` and `DATA_WSS` from the provisioning data. Keep the defaults only when they match.
+9. Save the configuration and start the app.
 
 The log shows `Starting Doover Device Agent` and then `Starting Doover App Controller`. The device becomes online in Doover after the Device Agent authenticates.
 
@@ -41,7 +42,7 @@ The proxy is removed during normal shutdown and replaced on every start. An abru
 
 ## Security and platform limits
 
-The App Controller needs full Docker API operations to create, update, and remove deployed app containers. Home Assistant therefore runs this app with protected mode off and without an AppArmor profile. A deployed app can request host mounts or elevated container privileges. Review every app assigned to this device, and only install this Home Assistant app on a host and network that you trust.
+The App Controller needs full Docker API operations to create, update, and remove deployed app containers. You must turn off protection mode after installation. The app also runs without an AppArmor profile. A deployed app can request host mounts or elevated container privileges. Review every app assigned to this device, and only install this Home Assistant app on a host and network that you trust.
 
 The upstream App Controller includes automatic host-wide Docker pruning for traditional standalone devices. This app disables that operation because the Docker daemon also owns Home Assistant apps and data. Deployment operations still have full Docker access, but the controller does not invoke `docker system prune`.
 

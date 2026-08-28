@@ -7,3 +7,4 @@
 - Preserve Device Agent token rotations across app restarts.
 - Enable remote Doover app deployments through the host Docker API.
 - Restrict the Device Agent API to host loopback and disable host-wide Docker pruning.
+- Use current Home Assistant app metadata and document the required protection-mode setting.
