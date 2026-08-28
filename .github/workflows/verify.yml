@@ -49,6 +49,6 @@ jobs:
           context: ./doover_device
           platforms: linux/amd64,linux/arm64
           build-args: |
-            BUILD_VERSION=0.1.0
+            BUILD_VERSION=0.2.0
             BUILD_ARCH=multiarch
           outputs: type=cacheonly

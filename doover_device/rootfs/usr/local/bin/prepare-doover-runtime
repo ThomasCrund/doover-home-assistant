@@ -1,0 +1,113 @@
+#!/usr/bin/env python3
+"""Authenticate to Docker Hub and pull the pinned private Doover images."""
+
+from __future__ import annotations
+
+import json
+import os
+from pathlib import Path
+import subprocess
+import tempfile
+from typing import Any
+
+
+DEVICE_AGENT_IMAGE = (
+    "spaneng/doover-device-agent:main@"
+    "sha256:e82c48e4e14d2dd1dc283a63857622f7a3a8e09d6cb9102770cc3a549bac4cf6"
+)
+APP_CONTROLLER_IMAGE = (
+    "spaneng/doover-app-controller:main@"
+    "sha256:c09862de054764c707514e6ce625b1c3f1165a1120e3120caf9742aabc937048"
+)
+DOOVER_IMAGES = (DEVICE_AGENT_IMAGE, APP_CONTROLLER_IMAGE)
+RUNTIME_IMAGE_TAGS = (
+    "doover-home-assistant/device-agent:runtime",
+    "doover-home-assistant/app-controller:runtime",
+)
+
+
+class ConfigurationError(ValueError):
+    """An error safe to show in the Home Assistant app log."""
+
+
+def _load_options(path: Path) -> dict[str, Any]:
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise ConfigurationError(f"cannot read Home Assistant options: {error}") from error
+    if not isinstance(value, dict):
+        raise ConfigurationError("Home Assistant options must be a JSON object")
+    return value
+
+
+def _required_text(options: dict[str, Any], key: str) -> str:
+    value = options.get(key)
+    if not isinstance(value, str) or not value.strip():
+        raise ConfigurationError(f"{key} is required")
+    return value.strip() if key == "dockerhub_username" else value
+
+
+def _docker_command(
+    docker_bin: str,
+    config_dir: Path,
+    arguments: list[str],
+    *,
+    stdin: str | None = None,
+    capture_output: bool = False,
+) -> subprocess.CompletedProcess[str]:
+    try:
+        return subprocess.run(
+            [docker_bin, "--config", str(config_dir), *arguments],
+            check=False,
+            input=stdin,
+            text=True,
+            capture_output=capture_output,
+        )
+    except OSError as error:
+        raise ConfigurationError(f"cannot run Docker CLI: {error}") from error
+
+
+def prepare(options_path: Path, docker_bin: str) -> None:
+    options = _load_options(options_path)
+    username = _required_text(options, "dockerhub_username")
+    token = _required_text(options, "dockerhub_token")
+
+    with tempfile.TemporaryDirectory(prefix="doover-docker-config-") as directory:
+        config_dir = Path(directory)
+        login = _docker_command(
+            docker_bin,
+            config_dir,
+            ["login", "--username", username, "--password-stdin"],
+            stdin=f"{token}\n",
+            capture_output=True,
+        )
+        if login.returncode != 0:
+            raise ConfigurationError(
+                "Docker Hub login failed; check dockerhub_username and dockerhub_token"
+            )
+
+        for image, runtime_tag in zip(DOOVER_IMAGES, RUNTIME_IMAGE_TAGS, strict=True):
+            print(f"[doover] Pulling {image.split('@', 1)[0]}", flush=True)
+            pull = _docker_command(docker_bin, config_dir, ["pull", image])
+            if pull.returncode != 0:
+                raise ConfigurationError(f"Docker could not pull {image.split('@', 1)[0]}")
+            tag = _docker_command(docker_bin, config_dir, ["tag", image, runtime_tag])
+            if tag.returncode != 0:
+                raise ConfigurationError(f"Docker could not tag {image.split('@', 1)[0]}")
+
+
+def main() -> int:
+    options_path = Path(os.environ.get("OPTIONS_PATH", "/data/options.json"))
+    docker_bin = os.environ.get("DOCKER_BIN", "docker")
+    try:
+        prepare(options_path, docker_bin)
+    except ConfigurationError as error:
+        print(f"[doover] Configuration error: {error}", flush=True)
+        return 2
+
+    print("[doover] Private Doover images are ready", flush=True)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

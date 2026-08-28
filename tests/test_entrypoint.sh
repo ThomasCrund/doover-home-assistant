@@ -14,71 +14,70 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
-mkdir -p "${TEST_DIR}/data/agent" "${TEST_DIR}/data/app_controller"
+mkdir -p "${TEST_DIR}/data"
 
-printf '%s\n' \
-    '{' \
-    '  "agent_id": "123456789",' \
-    '  "organisation_id": "987654321",' \
-    '  "auth_token": "test-token",' \
-    '  "client_id": "",' \
-    '  "client_secret": "",' \
-    '  "data_api": "https://global.data.doover.com",' \
-    '  "data_wss": "wss://global.data.doover.com/gateway",' \
-    '  "data_static_ips": "",' \
-    '  "debug": false' \
-    '}' > "${TEST_DIR}/options.json"
-
-# The single-quoted strings are the source of the generated stand-in services.
+# These single-quoted strings are the source of generated stand-in commands.
 # shellcheck disable=SC2016
-printf '%s\n' \
-    '#!/bin/sh' \
-    'if [ "${1:-}" = "healthcheck" ]; then exit 0; fi' \
-    'printf started > "${DDA_MARKER}"' \
-    'trap '\''printf stopped >> "${DDA_MARKER}"; exit 0'\'' TERM INT' \
-    'while :; do sleep 1; done' > "${TEST_DIR}/fake-dda"
+printf '%s\n' '#!/bin/sh' 'printf configured > "${CONFIGURE_MARKER}"' > "${TEST_DIR}/configure"
+# shellcheck disable=SC2016
+printf '%s\n' '#!/bin/sh' 'printf prepared > "${PREPARE_MARKER}"' > "${TEST_DIR}/prepare"
+# shellcheck disable=SC2016
+printf '%s\n' '#!/bin/sh' 'printf started > "${START_MARKER}"' > "${TEST_DIR}/start"
 
 # shellcheck disable=SC2016
 printf '%s\n' \
     '#!/bin/sh' \
-    'printf started > "${CONTROLLER_MARKER}"' \
-    'trap '\''printf stopped >> "${CONTROLLER_MARKER}"; exit 0'\'' TERM INT' \
-    'while :; do sleep 1; done' > "${TEST_DIR}/fake-controller"
+    'printf "%s\n" "$*" >> "${DOCKER_LOG}"' \
+    'case "$*" in' \
+    '  *"io.doover.home-assistant.managed"*"doover-device-agent"*) printf "true\n" ;;' \
+    '  *"io.doover.home-assistant.managed"*"doover-app-controller"*) printf "true\n" ;;' \
+    '  *"io.doover.home-assistant.managed"*"doover-device-loopback-proxy"*) printf "true\n" ;;' \
+    '  *"inspect --format {{.State.Running}} doover-device-agent"*) printf "true\n" ;;' \
+    '  *"inspect --format {{.State.Running}} doover-app-controller"*) printf "true\n" ;;' \
+    '  *"inspect --format {{.State.Running}} doover-device-loopback-proxy"*) printf "true\n" ;;' \
+    'esac' > "${TEST_DIR}/docker"
 
-chmod 0755 "${TEST_DIR}/fake-dda" "${TEST_DIR}/fake-controller"
+chmod 0755 "${TEST_DIR}/configure" "${TEST_DIR}/prepare" \
+    "${TEST_DIR}/start" "${TEST_DIR}/docker"
 
-OPTIONS_PATH="${TEST_DIR}/options.json" \
-AGENT_CONFIG_PATH="${TEST_DIR}/data/agent/config.json" \
-CONFIGURE_BIN="${REPO_ROOT}/doover_device/rootfs/usr/local/bin/configure-doover" \
-DDA_BIN="${TEST_DIR}/fake-dda" \
-APP_CONTROLLER_BIN="${TEST_DIR}/fake-controller" \
-DDA_MARKER="${TEST_DIR}/dda.marker" \
-CONTROLLER_MARKER="${TEST_DIR}/controller.marker" \
+CONFIGURE_MARKER="${TEST_DIR}/configure.marker" \
+PREPARE_MARKER="${TEST_DIR}/prepare.marker" \
+START_MARKER="${TEST_DIR}/start.marker" \
+DOCKER_LOG="${TEST_DIR}/docker.log" \
+CONFIGURE_BIN="${TEST_DIR}/configure" \
+PREPARE_BIN="${TEST_DIR}/prepare" \
+START_SERVICES_BIN="${TEST_DIR}/start" \
+DOCKER_BIN="${TEST_DIR}/docker" \
 REQUIRE_DOCKER_SOCKET=0 \
-REQUIRE_LOOPBACK_PROXY=0 \
 DATA_DIR="${TEST_DIR}/data" \
     "${REPO_ROOT}/doover_device/rootfs/run.sh" > "${TEST_DIR}/entrypoint.log" 2>&1 &
 ENTRYPOINT_PID=$!
 
 attempt=0
 while [ "${attempt}" -lt 20 ]; do
-    if [ -f "${TEST_DIR}/dda.marker" ] && [ -f "${TEST_DIR}/controller.marker" ]; then
+    if [ -f "${TEST_DIR}/configure.marker" ] &&
+        [ -f "${TEST_DIR}/prepare.marker" ] &&
+        [ -f "${TEST_DIR}/start.marker" ]; then
         break
     fi
     attempt=$((attempt + 1))
     sleep 0.1
 done
 
-test -f "${TEST_DIR}/dda.marker"
-test -f "${TEST_DIR}/controller.marker"
+test -f "${TEST_DIR}/configure.marker"
+test -f "${TEST_DIR}/prepare.marker"
+test -f "${TEST_DIR}/start.marker"
 
 kill -TERM "${ENTRYPOINT_PID}"
 wait "${ENTRYPOINT_PID}"
 ENTRYPOINT_PID=""
 
-grep -q 'startedstopped' "${TEST_DIR}/dda.marker"
-grep -q 'startedstopped' "${TEST_DIR}/controller.marker"
-grep -q 'Starting Doover Device Agent' "${TEST_DIR}/entrypoint.log"
-grep -q 'Starting Doover App Controller' "${TEST_DIR}/entrypoint.log"
+grep -q -- 'stop --time 15 doover-app-controller' "${TEST_DIR}/docker.log"
+grep -q -- 'stop --time 15 doover-device-agent' "${TEST_DIR}/docker.log"
+grep -q -- 'stop --time 15 doover-device-loopback-proxy' "${TEST_DIR}/docker.log"
+grep -q -- 'rm -f doover-app-controller' "${TEST_DIR}/docker.log"
+grep -q -- 'rm -f doover-device-agent' "${TEST_DIR}/docker.log"
+grep -q -- 'rm -f doover-device-loopback-proxy' "${TEST_DIR}/docker.log"
+grep -q 'Stopping Doover services' "${TEST_DIR}/entrypoint.log"
 
 printf 'entrypoint lifecycle: ok\n'

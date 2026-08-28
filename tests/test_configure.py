@@ -25,6 +25,8 @@ SPEC.loader.exec_module(configure_doover)
 
 def valid_options(**changes):
     options = {
+        "dockerhub_username": "doover-device",
+        "dockerhub_token": "registry-token",
         "agent_id": "123456789",
         "organisation_id": "987654321",
         "auth_token": "device-token-a",

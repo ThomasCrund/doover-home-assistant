@@ -3,6 +3,7 @@ set -eu
 
 PROXY_NAME="doover-device-loopback-proxy"
 DOCKER_BIN="${DOCKER_BIN:-docker}"
+TARGET_CONTAINER="${TARGET_CONTAINER:-doover-device-agent}"
 
 self_container="${SELF_CONTAINER_ID:-$(hostname)}"
 if [ -z "${self_container}" ] || ! "${DOCKER_BIN}" inspect "${self_container}" >/dev/null 2>&1; then
@@ -26,17 +27,29 @@ if [ -z "${self_container}" ]; then
 fi
 
 self_image=$("${DOCKER_BIN}" inspect --format '{{.Image}}' "${self_container}")
-self_ip=$(
+target_ip=$(
     "${DOCKER_BIN}" inspect \
         --format '{{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}' \
-        "${self_container}" | awk '{print $1}'
+        "${TARGET_CONTAINER}" | awk '{print $1}'
 )
-if [ -z "${self_image}" ] || [ -z "${self_ip}" ]; then
-    printf '[doover] Could not resolve the app image or private address\n' >&2
+if [ -z "${self_image}" ] || [ -z "${target_ip}" ]; then
+    printf '[doover] Could not resolve the app image or Device Agent address\n' >&2
     exit 1
 fi
 
-"${DOCKER_BIN}" rm -f "${PROXY_NAME}" >/dev/null 2>&1 || true
+if "${DOCKER_BIN}" inspect "${PROXY_NAME}" >/dev/null 2>&1; then
+    managed=$(
+        "${DOCKER_BIN}" inspect \
+            --format '{{index .Config.Labels "io.doover.home-assistant.managed"}}' \
+            "${PROXY_NAME}"
+    )
+    if [ "${managed}" != "true" ]; then
+        printf '[doover] Container name %s is already used by an unmanaged container\n' \
+            "${PROXY_NAME}" >&2
+        exit 1
+    fi
+    "${DOCKER_BIN}" rm -f "${PROXY_NAME}" >/dev/null
+fi
 "${DOCKER_BIN}" run --detach \
     --name "${PROXY_NAME}" \
     --network host \
@@ -45,7 +58,7 @@ fi
     --entrypoint /usr/bin/socat \
     "${self_image}" \
     'TCP4-LISTEN:50051,bind=127.0.0.1,reuseaddr,fork' \
-    "TCP4:${self_ip}:50051" >/dev/null
+    "TCP4:${target_ip}:50051" >/dev/null
 
 sleep 1
 if [ "$("${DOCKER_BIN}" inspect --format '{{.State.Running}}' "${PROXY_NAME}")" != "true" ]; then

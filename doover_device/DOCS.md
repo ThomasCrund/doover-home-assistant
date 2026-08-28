@@ -8,13 +8,15 @@ Create the device in Doover with the **Raspberry Pi** device type before you con
 2. Install **Doover Device**.
 3. Open the **Info** tab and turn off **Protection mode**. The App Controller cannot use the host Docker API while protection mode is on.
 4. Open the **Configuration** tab.
-5. Copy the `AGENT_ID` value to **Agent ID**.
-6. Copy the `ORGANISATION_ID` value to **Organisation ID**.
-7. Configure one credential method.
-8. Copy `DATA_API` and `DATA_WSS` from the provisioning data. Keep the defaults only when they match.
-9. Save the configuration and start the app.
+5. Enter a **Docker Hub username** that has access to the private Doover images.
+6. Create a read-only Docker Hub personal access token and enter it as the **Docker Hub access token**. Do not enter the account password.
+7. Copy the `AGENT_ID` value to **Agent ID**.
+8. Copy the `ORGANISATION_ID` value to **Organisation ID**.
+9. Configure one Doover device credential method.
+10. Copy `DATA_API` and `DATA_WSS` from the provisioning data. Keep the defaults only when they match.
+11. Save the configuration and start the app.
 
-The log shows `Starting Doover Device Agent` and then `Starting Doover App Controller`. The device becomes online in Doover after the Device Agent authenticates.
+The app signs in to Docker Hub, pulls the two digest-pinned Doover images, and removes its temporary Docker CLI login file. The log then shows `Starting Doover Device Agent` and `Starting Doover App Controller`. The device becomes online in Doover after the Device Agent authenticates.
 
 ## Choose a credential method
 
@@ -30,7 +32,7 @@ Assign apps to the Raspberry Pi device in Doover after the device comes online. 
 
 Deployed containers are Docker containers, not separate Home Assistant apps. Check deployment and health status in Doover. The **Doover Device** log also records pulls, starts, and failures.
 
-Stopping or uninstalling **Doover Device** does not remove containers that the App Controller already deployed. Delete those deployments in Doover before you uninstall the app. If the device is offline, remove the containers through the host Docker daemon.
+Stopping **Doover Device** removes its managed Device Agent, App Controller, and loopback proxy containers. It does not remove app containers that the App Controller already deployed. Delete those deployments in Doover before you uninstall the app. If the device is offline, remove the deployed containers through the host Docker daemon.
 
 ## Network ports
 
@@ -38,11 +40,13 @@ Doover app containers connect to the Device Agent at `127.0.0.1:50051`. The Home
 
 Port `50051` must be free on host loopback. The app will stop with an error instead of exposing the Device Agent more broadly when it cannot start the proxy.
 
-The proxy is removed during normal shutdown and replaced on every start. An abrupt host power loss or forced container removal can leave a stopped proxy container; starting **Doover Device** again removes and replaces it.
+The three managed service containers are removed during normal shutdown and replaced on every start. An abrupt host power loss or forced removal of the Home Assistant app can leave them running or stopped. Starting **Doover Device** again removes and replaces them. If you uninstall the app after a forced shutdown, remove containers labelled `io.doover.home-assistant.managed=true` through the host Docker daemon.
 
 ## Security and platform limits
 
 The App Controller needs full Docker API operations to create, update, and remove deployed app containers. You must turn off protection mode after installation. The app also runs without an AppArmor profile. A deployed app can request host mounts or elevated container privileges. Review every app assigned to this device, and only install this Home Assistant app on a host and network that you trust.
+
+Home Assistant stores the Docker Hub username and access token in the app configuration and includes them in app backups. Use a dedicated, read-only token and restrict the Docker Hub account to the required Doover repositories. The token is sent to `docker login` through standard input, is not written to the app log or command arguments, and its temporary Docker CLI configuration is deleted after each pull.
 
 The upstream App Controller includes automatic host-wide Docker pruning for traditional standalone devices. This app disables that operation because the Docker daemon also owns Home Assistant apps and data. Deployment operations still have full Docker access, but the controller does not invoke `docker system prune`.
 
@@ -50,4 +54,4 @@ The app supports `aarch64` and `amd64`. Raspberry Pi installations must run a 64
 
 ## Persistent data
 
-Home Assistant stores the Device Agent state and the App Controller deployment records in the app's `/data` directory. Include the app in Home Assistant backups to preserve the current device token and deployment state.
+Home Assistant stores the Device Agent state, App Controller deployment records, and configured secrets in the app's `/data` directory. Include the app in Home Assistant backups to preserve the current device token and deployment state. Protect those backups because they contain the Doover and Docker Hub credentials.

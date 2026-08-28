@@ -1,0 +1,175 @@
+#!/bin/sh
+set -eu
+
+DOCKER_BIN="${DOCKER_BIN:-docker}"
+DATA_DIR="${DATA_DIR:-/data}"
+PROXY_BIN="${PROXY_BIN:-/usr/local/bin/start-doover-loopback-proxy}"
+WRAPPER_SOURCE="${WRAPPER_SOURCE:-/usr/local/bin/doover-app-run-home-assistant}"
+DOCKER_CLI_SOURCE="${DOCKER_CLI_SOURCE:-/usr/bin/docker}"
+DOCKER_COMPOSE_SOURCE="${DOCKER_COMPOSE_SOURCE:-/usr/libexec/docker/cli-plugins/docker-compose}"
+STARTUP_ATTEMPTS="${STARTUP_ATTEMPTS:-60}"
+
+DDA_NAME="doover-device-agent"
+CONTROLLER_NAME="doover-app-controller"
+PROXY_NAME="doover-device-loopback-proxy"
+DDA_IMAGE="doover-home-assistant/device-agent:runtime"
+CONTROLLER_IMAGE="doover-home-assistant/app-controller:runtime"
+
+log() {
+    printf '[doover] %s\n' "$*"
+}
+
+remove_managed_container() {
+    container_name="$1"
+    if ! "${DOCKER_BIN}" inspect "${container_name}" >/dev/null 2>&1; then
+        return
+    fi
+    managed=$(
+        "${DOCKER_BIN}" inspect \
+            --format '{{index .Config.Labels "io.doover.home-assistant.managed"}}' \
+            "${container_name}"
+    )
+    if [ "${managed}" != "true" ]; then
+        log "Container name ${container_name} is already used by an unmanaged container"
+        return 1
+    fi
+    "${DOCKER_BIN}" rm -f "${container_name}" >/dev/null
+}
+
+self_container="${SELF_CONTAINER_ID:-$(hostname)}"
+if [ -z "${self_container}" ] || ! "${DOCKER_BIN}" inspect "${self_container}" >/dev/null 2>&1; then
+    self_ip=$(hostname -i | awk '{print $1}')
+    self_container=""
+    for candidate in $("${DOCKER_BIN}" ps -q); do
+        candidate_ips=$(
+            "${DOCKER_BIN}" inspect \
+                --format '{{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}' \
+                "${candidate}"
+        )
+        case " ${candidate_ips} " in
+            *" ${self_ip} "*) self_container="${candidate}"; break ;;
+        esac
+    done
+fi
+
+if [ -z "${self_container}" ]; then
+    log "Could not identify the Home Assistant app container"
+    exit 1
+fi
+
+# The single-quoted text is a Docker Go template, not a shell expression.
+# shellcheck disable=SC2016
+private_network=$(
+    "${DOCKER_BIN}" inspect \
+        --format '{{range $name, $_ := .NetworkSettings.Networks}}{{$name}} {{end}}' \
+        "${self_container}" | awk '{print $1}'
+)
+if [ -z "${private_network}" ]; then
+    log "Could not resolve the Home Assistant private Docker network"
+    exit 1
+fi
+
+mkdir -p "${DATA_DIR}/runtime/bin"
+cp "${WRAPPER_SOURCE}" "${DATA_DIR}/runtime/doover-app-run-home-assistant"
+cp "${DOCKER_CLI_SOURCE}" "${DATA_DIR}/runtime/bin/docker"
+cp "${DOCKER_COMPOSE_SOURCE}" "${DATA_DIR}/runtime/docker-compose"
+chmod 0755 \
+    "${DATA_DIR}/runtime/doover-app-run-home-assistant" \
+    "${DATA_DIR}/runtime/bin/docker" \
+    "${DATA_DIR}/runtime/docker-compose"
+
+cleanup_on_error() {
+    status=$?
+    if [ "${status}" -ne 0 ]; then
+        remove_managed_container "${CONTROLLER_NAME}" || true
+        remove_managed_container "${DDA_NAME}" || true
+        remove_managed_container "${PROXY_NAME}" || true
+    fi
+    exit "${status}"
+}
+trap cleanup_on_error EXIT
+
+remove_managed_container "${CONTROLLER_NAME}" || exit 1
+remove_managed_container "${DDA_NAME}" || exit 1
+remove_managed_container "${PROXY_NAME}" || exit 1
+
+log "Starting Doover Device Agent"
+"${DOCKER_BIN}" run --detach \
+    --name "${DDA_NAME}" \
+    --network "${private_network}" \
+    --volumes-from "${self_container}" \
+    --restart no \
+    --label io.doover.home-assistant.managed=true \
+    --env CONFIG_FP=/data/agent/config.json \
+    --entrypoint /bin/dda-agent \
+    "${DDA_IMAGE}" >/dev/null
+
+ready=0
+attempt=0
+while [ "${attempt}" -lt "${STARTUP_ATTEMPTS}" ]; do
+    if [ "$("${DOCKER_BIN}" inspect --format '{{.State.Running}}' "${DDA_NAME}" 2>/dev/null)" != "true" ]; then
+        break
+    fi
+    if "${DOCKER_BIN}" exec "${DDA_NAME}" /bin/dda-agent healthcheck >/dev/null 2>&1; then
+        ready=1
+        break
+    fi
+    attempt=$((attempt + 1))
+    sleep 1
+done
+if [ "${ready}" -ne 1 ]; then
+    "${DOCKER_BIN}" logs "${DDA_NAME}" >&2 || true
+    log "Device Agent did not become healthy"
+    exit 1
+fi
+
+log "Starting host-loopback proxy on 127.0.0.1:50051"
+SELF_CONTAINER_ID="${self_container}" \
+TARGET_CONTAINER="${DDA_NAME}" \
+DOCKER_BIN="${DOCKER_BIN}" \
+    "${PROXY_BIN}"
+
+log "Starting Doover App Controller"
+"${DOCKER_BIN}" run --detach \
+    --name "${CONTROLLER_NAME}" \
+    --network "${private_network}" \
+    --volumes-from "${self_container}" \
+    --restart no \
+    --label io.doover.home-assistant.managed=true \
+    --env APP_KEY=doover-app-controller \
+    --env CONFIG_FP=/data/agent/config.json \
+    --env DDA_URI=doover-device-agent:50051 \
+    --env DOCKER_HOST=unix:///run/docker.sock \
+    --env HEALTHCHECK_PORT=49191 \
+    --env PATH=/data/runtime/bin:/app/.venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+    --entrypoint /data/runtime/doover-app-run-home-assistant \
+    "${CONTROLLER_IMAGE}" >/dev/null
+
+ready=0
+attempt=0
+while [ "${attempt}" -lt "${STARTUP_ATTEMPTS}" ]; do
+    if [ "$("${DOCKER_BIN}" inspect --format '{{.State.Running}}' "${CONTROLLER_NAME}" 2>/dev/null)" != "true" ]; then
+        break
+    fi
+    if "${DOCKER_BIN}" exec "${CONTROLLER_NAME}" python3 -c \
+        'import urllib.request; urllib.request.urlopen("http://127.0.0.1:49191", timeout=2).read()' \
+        >/dev/null 2>&1; then
+        ready=1
+        break
+    fi
+    attempt=$((attempt + 1))
+    sleep 1
+done
+if [ "${ready}" -ne 1 ]; then
+    "${DOCKER_BIN}" logs "${CONTROLLER_NAME}" >&2 || true
+    log "App Controller did not become healthy"
+    exit 1
+fi
+if ! "${DOCKER_BIN}" exec "${CONTROLLER_NAME}" docker version >/dev/null 2>&1 ||
+    ! "${DOCKER_BIN}" exec "${CONTROLLER_NAME}" docker compose version >/dev/null 2>&1; then
+    log "App Controller Docker CLI or Compose plugin is not usable"
+    exit 1
+fi
+
+trap - EXIT
+log "Doover services are healthy"

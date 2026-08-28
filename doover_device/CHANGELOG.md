@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.0
+
+- Accept Docker Hub credentials in the Home Assistant configuration.
+- Build the installable app from a public bootstrap image, then pull the private Doover services by pinned digest at startup.
+- Run the Device Agent and App Controller as managed sibling containers and remove their temporary Docker login state.
+
 ## 0.1.0
 
 - Run the Doover Device Agent and App Controller in one Home Assistant app.

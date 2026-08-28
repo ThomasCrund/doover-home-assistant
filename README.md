@@ -26,17 +26,17 @@ Run:
 scripts/verify.sh
 ```
 
-The script checks configuration rendering, token-rotation persistence, Home Assistant metadata, the loopback proxy contract, disabled host-wide pruning, shell code, and the two-process lifecycle.
+The script checks configuration rendering, credential-safe image pulls, token-rotation persistence, Home Assistant metadata, the managed-container and loopback proxy contracts, disabled host-wide pruning, and shell code.
 
 To verify the target images, build both supported architectures:
 
 ```sh
 docker buildx build \
   --platform linux/amd64,linux/arm64 \
-  --build-arg BUILD_VERSION=0.1.0 \
+  --build-arg BUILD_VERSION=0.2.0 \
   --build-arg BUILD_ARCH=multiarch \
   --output type=cacheonly \
   doover_device
 ```
 
-The Dockerfile starts the real Device Agent and App Controller without cloud access during the build. The build fails if either service does not become healthy.
+The build uses only a public bootstrap image. At runtime, the app uses the configured Docker Hub access token to pull the digest-pinned private Device Agent and App Controller images.

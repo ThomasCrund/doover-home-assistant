@@ -2,6 +2,7 @@
 """Run the Doover App Controller without host-wide Docker pruning."""
 
 import logging
+from pathlib import Path
 
 from doover_app_controller import DooverAppControllerApplication
 from pydoover.docker import run_app
@@ -16,7 +17,47 @@ class HomeAssistantAppController(DooverAppControllerApplication):
         )
 
 
+def prepare_persistent_state(
+    persistent_path: Path = Path("/data/app_controller"),
+    controller_path: Path = Path("/var/lib/dds/app_controller"),
+) -> None:
+    """Point the controller's fixed state directory at Home Assistant data."""
+    persistent_path.mkdir(parents=True, exist_ok=True)
+    controller_path.parent.mkdir(parents=True, exist_ok=True)
+
+    if controller_path.is_symlink():
+        if controller_path.resolve() != persistent_path.resolve():
+            raise RuntimeError(f"unexpected controller state link: {controller_path}")
+        return
+    if controller_path.exists():
+        if not controller_path.is_dir() or any(controller_path.iterdir()):
+            raise RuntimeError(f"controller state path is not empty: {controller_path}")
+        controller_path.rmdir()
+    controller_path.symlink_to(persistent_path, target_is_directory=True)
+
+
+def prepare_docker_compose_plugin(
+    source_path: Path = Path("/data/runtime/docker-compose"),
+    plugin_path: Path = Path("/root/.docker/cli-plugins/docker-compose"),
+) -> None:
+    """Expose Compose without persisting Docker registry login state in /data."""
+    if not source_path.is_file():
+        raise RuntimeError(f"Docker Compose plugin is missing: {source_path}")
+    plugin_path.parent.mkdir(parents=True, exist_ok=True)
+    if plugin_path.is_symlink():
+        if plugin_path.resolve() != source_path.resolve():
+            raise RuntimeError(f"unexpected Docker Compose plugin link: {plugin_path}")
+        return
+    if plugin_path.exists():
+        if plugin_path.is_file():
+            return
+        raise RuntimeError(f"Docker Compose plugin path is not a file: {plugin_path}")
+    plugin_path.symlink_to(source_path)
+
+
 def main():
+    prepare_persistent_state()
+    prepare_docker_compose_plugin()
     run_app(HomeAssistantAppController())
 
 

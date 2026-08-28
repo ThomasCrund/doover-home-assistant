@@ -1,4 +1,10 @@
 configuration:
+  dockerhub_username:
+    name: Docker Hub username
+    description: Docker Hub account that can pull the private Doover Device Agent and App Controller images.
+  dockerhub_token:
+    name: Docker Hub access token
+    description: Read-only Docker Hub personal access token for the configured account. Do not use the account password.
   agent_id:
     name: Agent ID
     description: Numeric agent ID from the Doover Raspberry Pi provisioning data.
