@@ -36,14 +36,18 @@ export HEALTHCHECK_PORT="49191"
 DDA_PID=""
 CONTROLLER_PID=""
 
-# shellcheck disable=SC2329  # Called by the TERM and INT traps.
+# shellcheck disable=SC2317,SC2329  # Called by the TERM and INT traps.
 stop_services() {
     trap - TERM INT
     log "Stopping Doover services"
-    [ -n "${CONTROLLER_PID}" ] && kill -TERM "${CONTROLLER_PID}" 2>/dev/null || true
-    [ -n "${DDA_PID}" ] && kill -TERM "${DDA_PID}" 2>/dev/null || true
-    [ -n "${CONTROLLER_PID}" ] && wait "${CONTROLLER_PID}" 2>/dev/null || true
-    [ -n "${DDA_PID}" ] && wait "${DDA_PID}" 2>/dev/null || true
+    if [ -n "${CONTROLLER_PID}" ]; then
+        kill -TERM "${CONTROLLER_PID}" 2>/dev/null || true
+        wait "${CONTROLLER_PID}" 2>/dev/null || true
+    fi
+    if [ -n "${DDA_PID}" ]; then
+        kill -TERM "${DDA_PID}" 2>/dev/null || true
+        wait "${DDA_PID}" 2>/dev/null || true
+    fi
     if [ "${REQUIRE_LOOPBACK_PROXY}" = "1" ]; then
         docker rm -f "${PROXY_NAME}" >/dev/null 2>&1 || true
     fi
