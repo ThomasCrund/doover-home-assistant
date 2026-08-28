@@ -1,0 +1,55 @@
+#!/bin/sh
+set -eu
+
+PROXY_NAME="doover-device-loopback-proxy"
+DOCKER_BIN="${DOCKER_BIN:-docker}"
+
+self_container="${SELF_CONTAINER_ID:-$(hostname)}"
+if [ -z "${self_container}" ] || ! "${DOCKER_BIN}" inspect "${self_container}" >/dev/null 2>&1; then
+    self_ip=$(hostname -i | awk '{print $1}')
+    self_container=""
+    for candidate in $("${DOCKER_BIN}" ps -q); do
+        candidate_ips=$(
+            "${DOCKER_BIN}" inspect \
+                --format '{{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}' \
+                "${candidate}"
+        )
+        case " ${candidate_ips} " in
+            *" ${self_ip} "*) self_container="${candidate}"; break ;;
+        esac
+    done
+fi
+
+if [ -z "${self_container}" ]; then
+    printf '[doover] Could not identify the Home Assistant app container\n' >&2
+    exit 1
+fi
+
+self_image=$("${DOCKER_BIN}" inspect --format '{{.Image}}' "${self_container}")
+self_ip=$(
+    "${DOCKER_BIN}" inspect \
+        --format '{{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}' \
+        "${self_container}" | awk '{print $1}'
+)
+if [ -z "${self_image}" ] || [ -z "${self_ip}" ]; then
+    printf '[doover] Could not resolve the app image or private address\n' >&2
+    exit 1
+fi
+
+"${DOCKER_BIN}" rm -f "${PROXY_NAME}" >/dev/null 2>&1 || true
+"${DOCKER_BIN}" run --detach \
+    --name "${PROXY_NAME}" \
+    --network host \
+    --restart no \
+    --label io.doover.home-assistant.managed=true \
+    --entrypoint /usr/bin/socat \
+    "${self_image}" \
+    'TCP4-LISTEN:50051,bind=127.0.0.1,reuseaddr,fork' \
+    "TCP4:${self_ip}:50051" >/dev/null
+
+sleep 1
+if [ "$("${DOCKER_BIN}" inspect --format '{{.State.Running}}' "${PROXY_NAME}")" != "true" ]; then
+    "${DOCKER_BIN}" logs "${PROXY_NAME}" >&2 || true
+    "${DOCKER_BIN}" rm -f "${PROXY_NAME}" >/dev/null 2>&1 || true
+    exit 1
+fi

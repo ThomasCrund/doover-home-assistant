@@ -1,0 +1,28 @@
+configuration:
+  agent_id:
+    name: Agent ID
+    description: Numeric agent ID from the Doover Raspberry Pi provisioning data.
+  organisation_id:
+    name: Organisation ID
+    description: Numeric organisation ID from the Doover provisioning data.
+  auth_token:
+    name: Device auth token
+    description: Device token from Doover. Leave blank only when you use the OAuth client ID and secret.
+  client_id:
+    name: OAuth client ID
+    description: OAuth client ID from Doover. The add-on uses it only when the device auth token is blank.
+  client_secret:
+    name: OAuth client secret
+    description: OAuth client secret from Doover. The add-on uses it only when the device auth token is blank.
+  data_api:
+    name: Doover Data API
+    description: HTTPS base URL from the provisioning data.
+  data_wss:
+    name: Doover Data WebSocket
+    description: WebSocket gateway URL from the provisioning data.
+  data_static_ips:
+    name: Static Data API IPs
+    description: Optional comma-separated IP addresses used when DNS cannot reach the Data API.
+  debug:
+    name: Debug logging
+    description: Log extra Device Agent diagnostics. Logs never include configured credentials.

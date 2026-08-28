@@ -1,0 +1,54 @@
+name: Verify
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+
+      - name: Install ShellCheck
+        run: sudo apt-get update && sudo apt-get install --yes shellcheck
+
+      - name: Validate Home Assistant app metadata
+        uses: frenck/action-addon-linter@v2.21.0
+        with:
+          path: ./doover_device
+
+      - name: Run verification
+        run: scripts/verify.sh
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build both supported architectures
+        uses: docker/build-push-action@v6
+        with:
+          context: ./doover_device
+          platforms: linux/amd64,linux/arm64
+          build-args: |
+            BUILD_VERSION=0.1.0
+            BUILD_ARCH=multiarch
+          outputs: type=cacheonly
