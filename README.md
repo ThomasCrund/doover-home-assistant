@@ -33,7 +33,7 @@ To verify the target images, build both supported architectures:
 ```sh
 docker buildx build \
   --platform linux/amd64,linux/arm64 \
-  --build-arg BUILD_VERSION=0.2.0 \
+  --build-arg BUILD_VERSION=0.2.1 \
   --build-arg BUILD_ARCH=multiarch \
   --output type=cacheonly \
   doover_device

@@ -32,8 +32,8 @@ def valid_options(**changes):
         "auth_token": "device-token-a",
         "client_id": "",
         "client_secret": "",
-        "data_api": "https://global.data.doover.com",
-        "data_wss": "wss://global.data.doover.com/gateway",
+        "data_api": "https://data.doover.com/api",
+        "data_wss": "wss://data.doover.com/gateway",
         "data_static_ips": "",
         "debug": False,
     }
@@ -51,6 +51,8 @@ class ConfigureDooverTests(unittest.TestCase):
         self.assertEqual(config["agent_id"], "123456789")
         self.assertEqual(config["organisation_id"], "987654321")
         self.assertEqual(config["auth_token"], "device-token-a")
+        self.assertEqual(config["data_api"], "https://data.doover.com/api")
+        self.assertEqual(config["data_wss"], "wss://data.doover.com/gateway")
         self.assertEqual(config["port"], 50051)
         self.assertFalse(config["run_web_server"])
         self.assertNotIn("data_static_ips", config)
@@ -144,7 +146,7 @@ class ConfigureDooverTests(unittest.TestCase):
             valid_options(agent_id="pi-one"),
             valid_options(organisation_id=""),
             valid_options(data_api="ftp://data.doover.com"),
-            valid_options(data_wss="https://global.data.doover.com/gateway"),
+            valid_options(data_wss="https://data.doover.com/gateway"),
             valid_options(data_static_ips="15.197.66.194 not-an-ip"),
             valid_options(debug="false"),
         ]

@@ -1,6 +1,6 @@
 # https://developers.home-assistant.io/docs/apps/configuration#app-configuration
 name: Doover Device
-version: "0.2.0"
+version: "0.2.1"
 slug: doover_device
 description: Connect this Home Assistant host to Doover as a Raspberry Pi device
 url: https://github.com/ThomasCrund/doover-home-assistant/tree/main/doover_device
@@ -21,8 +21,8 @@ options:
   auth_token: ""
   client_id: ""
   client_secret: ""
-  data_api: https://global.data.doover.com
-  data_wss: wss://global.data.doover.com/gateway
+  data_api: https://data.doover.com/api
+  data_wss: wss://data.doover.com/gateway
   data_static_ips: ""
   debug: false
 schema:

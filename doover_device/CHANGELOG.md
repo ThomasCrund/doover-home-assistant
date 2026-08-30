@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.1
+
+- Use `https://data.doover.com/api` and `wss://data.doover.com/gateway` as the default Doover endpoints.
+
 ## 0.2.0
 
 - Accept Docker Hub credentials in the Home Assistant configuration.
