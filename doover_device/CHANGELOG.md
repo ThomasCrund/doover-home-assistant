@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.0
+
+- Add a restricted local Home Assistant broker for Doover device apps.
+- Add configuration for a scoped bridge credential.
+- Support selected sensor readings, binary sensors, and light controls through the Home Assistant Bridge Doover app.
+
 ## 0.2.1
 
 - Use `https://data.doover.com/api` and `wss://data.doover.com/gateway` as the default Doover endpoints.

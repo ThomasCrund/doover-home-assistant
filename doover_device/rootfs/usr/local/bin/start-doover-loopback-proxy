@@ -1,9 +1,11 @@
 #!/bin/sh
 set -eu
 
-PROXY_NAME="doover-device-loopback-proxy"
+PROXY_NAME="${PROXY_NAME:-doover-device-loopback-proxy}"
 DOCKER_BIN="${DOCKER_BIN:-docker}"
 TARGET_CONTAINER="${TARGET_CONTAINER:-doover-device-agent}"
+LISTEN_PORT="${LISTEN_PORT:-50051}"
+TARGET_PORT="${TARGET_PORT:-${LISTEN_PORT}}"
 
 self_container="${SELF_CONTAINER_ID:-$(hostname)}"
 if [ -z "${self_container}" ] || ! "${DOCKER_BIN}" inspect "${self_container}" >/dev/null 2>&1; then
@@ -33,7 +35,7 @@ target_ip=$(
         "${TARGET_CONTAINER}" | awk '{print $1}'
 )
 if [ -z "${self_image}" ] || [ -z "${target_ip}" ]; then
-    printf '[doover] Could not resolve the app image or Device Agent address\n' >&2
+    printf '[doover] Could not resolve the app image or target container address\n' >&2
     exit 1
 fi
 
@@ -57,8 +59,8 @@ fi
     --label io.doover.home-assistant.managed=true \
     --entrypoint /usr/bin/socat \
     "${self_image}" \
-    'TCP4-LISTEN:50051,bind=127.0.0.1,reuseaddr,fork' \
-    "TCP4:${target_ip}:50051" >/dev/null
+    "TCP4-LISTEN:${LISTEN_PORT},bind=127.0.0.1,reuseaddr,fork" \
+    "TCP4:${target_ip}:${TARGET_PORT}" >/dev/null
 
 sleep 1
 if [ "$("${DOCKER_BIN}" inspect --format '{{.State.Running}}' "${PROXY_NAME}")" != "true" ]; then

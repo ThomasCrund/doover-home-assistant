@@ -23,6 +23,7 @@ printf '%s\n' '#!/bin/sh' 'printf configured > "${CONFIGURE_MARKER}"' > "${TEST_
 printf '%s\n' '#!/bin/sh' 'printf prepared > "${PREPARE_MARKER}"' > "${TEST_DIR}/prepare"
 # shellcheck disable=SC2016
 printf '%s\n' '#!/bin/sh' 'printf started > "${START_MARKER}"' > "${TEST_DIR}/start"
+printf '%s\n' '#!/bin/sh' 'exit 1' > "${TEST_DIR}/bridge"
 
 # shellcheck disable=SC2016
 printf '%s\n' \
@@ -38,7 +39,7 @@ printf '%s\n' \
     'esac' > "${TEST_DIR}/docker"
 
 chmod 0755 "${TEST_DIR}/configure" "${TEST_DIR}/prepare" \
-    "${TEST_DIR}/start" "${TEST_DIR}/docker"
+    "${TEST_DIR}/start" "${TEST_DIR}/bridge" "${TEST_DIR}/docker"
 
 CONFIGURE_MARKER="${TEST_DIR}/configure.marker" \
 PREPARE_MARKER="${TEST_DIR}/prepare.marker" \
@@ -47,6 +48,7 @@ DOCKER_LOG="${TEST_DIR}/docker.log" \
 CONFIGURE_BIN="${TEST_DIR}/configure" \
 PREPARE_BIN="${TEST_DIR}/prepare" \
 START_SERVICES_BIN="${TEST_DIR}/start" \
+BRIDGE_BIN="${TEST_DIR}/bridge" \
 DOCKER_BIN="${TEST_DIR}/docker" \
 REQUIRE_DOCKER_SOCKET=0 \
 DATA_DIR="${TEST_DIR}/data" \

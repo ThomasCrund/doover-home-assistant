@@ -6,6 +6,7 @@ cd "${REPO_ROOT}"
 export PYTHONDONTWRITEBYTECODE=1
 
 python3 -m unittest discover -s tests -p 'test_*.py' -v
+(cd home_assistant_bridge && "${UV_BIN:-uv}" run pytest -q)
 ruby tests/test_metadata.rb
 shellcheck \
     doover_device/rootfs/run.sh \

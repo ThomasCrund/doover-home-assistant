@@ -12,12 +12,14 @@ RUN apk add --no-cache docker-cli docker-cli-compose socat
 COPY rootfs /
 
 RUN chmod 0755 /run.sh /usr/local/bin/configure-doover \
+        /usr/local/bin/home-assistant-bridge-broker \
         /usr/local/bin/doover-app-run-home-assistant \
         /usr/local/bin/prepare-doover-runtime \
         /usr/local/bin/start-doover-services \
         /usr/local/bin/start-doover-loopback-proxy \
     && python3 -m py_compile \
         /usr/local/bin/configure-doover \
+        /usr/local/bin/home-assistant-bridge-broker \
         /usr/local/bin/doover-app-run-home-assistant \
         /usr/local/bin/prepare-doover-runtime
 

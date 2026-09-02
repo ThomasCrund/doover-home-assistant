@@ -1,17 +1,18 @@
 # https://developers.home-assistant.io/docs/apps/configuration#app-configuration
 name: Doover Device
-version: "0.2.1"
+version: "0.3.0"
 slug: doover_device
 description: Connect this Home Assistant host to Doover as a Raspberry Pi device
 url: https://github.com/ThomasCrund/doover-home-assistant/tree/main/doover_device
 stage: experimental
 startup: services
-timeout: 60
+timeout: 75
 init: false
 arch:
   - aarch64
   - amd64
 docker_api: true
+homeassistant_api: true
 apparmor: false
 options:
   dockerhub_username: ""
@@ -24,6 +25,8 @@ options:
   data_api: https://data.doover.com/api
   data_wss: wss://data.doover.com/gateway
   data_static_ips: ""
+  homeassistant_bridge_enabled: false
+  homeassistant_bridge_token: ""
   debug: false
 schema:
   dockerhub_username: str
@@ -36,4 +39,6 @@ schema:
   data_api: url
   data_wss: str
   data_static_ips: str
+  homeassistant_bridge_enabled: bool
+  homeassistant_bridge_token: password
   debug: bool

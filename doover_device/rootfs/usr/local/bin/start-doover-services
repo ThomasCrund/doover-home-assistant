@@ -12,6 +12,7 @@ STARTUP_ATTEMPTS="${STARTUP_ATTEMPTS:-60}"
 DDA_NAME="doover-device-agent"
 CONTROLLER_NAME="doover-app-controller"
 PROXY_NAME="doover-device-loopback-proxy"
+BRIDGE_PROXY_NAME="doover-home-assistant-bridge-proxy"
 DDA_IMAGE="doover-home-assistant/device-agent:runtime"
 CONTROLLER_IMAGE="doover-home-assistant/app-controller:runtime"
 
@@ -84,6 +85,7 @@ cleanup_on_error() {
         remove_managed_container "${CONTROLLER_NAME}" || true
         remove_managed_container "${DDA_NAME}" || true
         remove_managed_container "${PROXY_NAME}" || true
+        remove_managed_container "${BRIDGE_PROXY_NAME}" || true
     fi
     exit "${status}"
 }
@@ -92,6 +94,7 @@ trap cleanup_on_error EXIT
 remove_managed_container "${CONTROLLER_NAME}" || exit 1
 remove_managed_container "${DDA_NAME}" || exit 1
 remove_managed_container "${PROXY_NAME}" || exit 1
+remove_managed_container "${BRIDGE_PROXY_NAME}" || exit 1
 
 log "Starting Doover Device Agent"
 "${DOCKER_BIN}" run --detach \
@@ -128,6 +131,17 @@ SELF_CONTAINER_ID="${self_container}" \
 TARGET_CONTAINER="${DDA_NAME}" \
 DOCKER_BIN="${DOCKER_BIN}" \
     "${PROXY_BIN}"
+
+if [ "${BRIDGE_ENABLED:-0}" = "1" ]; then
+    log "Starting Home Assistant bridge proxy on 127.0.0.1:49192"
+    SELF_CONTAINER_ID="${self_container}" \
+    TARGET_CONTAINER="${self_container}" \
+    PROXY_NAME="${BRIDGE_PROXY_NAME}" \
+    LISTEN_PORT=49192 \
+    TARGET_PORT=49192 \
+    DOCKER_BIN="${DOCKER_BIN}" \
+        "${PROXY_BIN}"
+fi
 
 log "Starting Doover App Controller"
 "${DOCKER_BIN}" run --detach \

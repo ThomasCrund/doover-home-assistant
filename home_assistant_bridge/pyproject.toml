@@ -1,0 +1,28 @@
+[project]
+name = "doover-home-assistant-bridge"
+version = "0.1.0"
+description = "Doover device app for selected Home Assistant entities"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "pydoover==1.16.1",
+    "grpcio==1.71.0",
+    "protobuf==6.30.2",
+]
+
+[project.scripts]
+doover-app-run = "home_assistant_bridge:main"
+export-config = "home_assistant_bridge.app_config:export"
+export-ui = "home_assistant_bridge.app_ui:export"
+
+[build-system]
+requires = ["hatchling==1.27.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/home_assistant_bridge"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.5",
+]

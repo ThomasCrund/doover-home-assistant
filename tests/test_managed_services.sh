@@ -30,9 +30,11 @@ printf '%s\n' \
     '  *"io.doover.home-assistant.managed"*"doover-app-controller"*) printf "false\n" ;;' \
     '  *"--format {{.Image}} self"*) printf "sha256:addon\n" ;;' \
     '  *"--format {{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}} doover-device-agent"*) printf "172.30.32.3 \n" ;;' \
+    '  *"--format {{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}} self"*) printf "172.30.32.2 \n" ;;' \
     '  *"--format {{.State.Running}} doover-device-agent"*) printf "true\n" ;;' \
     '  *"--format {{.State.Running}} doover-app-controller"*) printf "true\n" ;;' \
     '  *"--format {{.State.Running}} doover-device-loopback-proxy"*) printf "true\n" ;;' \
+    '  *"--format {{.State.Running}} doover-home-assistant-bridge-proxy"*) printf "true\n" ;;' \
     'esac' \
     'exit 0' > "${TEST_DIR}/docker"
 chmod 0755 "${TEST_DIR}/docker"
@@ -41,6 +43,7 @@ DOCKER_LOG="${TEST_DIR}/docker.log" \
 DOCKER_BIN="${TEST_DIR}/docker" \
 DATA_DIR="${TEST_DIR}/data" \
 SELF_CONTAINER_ID=self \
+BRIDGE_ENABLED=1 \
 STARTUP_ATTEMPTS=1 \
 WRAPPER_SOURCE="${REPO_ROOT}/doover_device/rootfs/usr/local/bin/doover-app-run-home-assistant" \
 DOCKER_CLI_SOURCE="${TEST_DIR}/docker-cli" \
@@ -53,6 +56,8 @@ grep -q -- '--entrypoint /bin/dda-agent doover-home-assistant/device-agent:runti
 grep -q -- 'exec doover-device-agent /bin/dda-agent healthcheck' "${TEST_DIR}/docker.log"
 grep -q -- '--network host' "${TEST_DIR}/docker.log"
 grep -q -- 'TCP4:172.30.32.3:50051' "${TEST_DIR}/docker.log"
+grep -q -- '--name doover-home-assistant-bridge-proxy --network host' "${TEST_DIR}/docker.log"
+grep -q -- 'TCP4:172.30.32.2:49192' "${TEST_DIR}/docker.log"
 grep -q -- '--name doover-app-controller --network hassio --volumes-from self' "${TEST_DIR}/docker.log"
 grep -q -- '--env DDA_URI=doover-device-agent:50051' "${TEST_DIR}/docker.log"
 grep -q -- '--env DOCKER_HOST=unix:///run/docker.sock' "${TEST_DIR}/docker.log"

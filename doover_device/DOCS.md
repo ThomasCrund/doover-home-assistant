@@ -18,6 +18,21 @@ Create the device in Doover with the **Raspberry Pi** device type before you con
 
 The app signs in to Docker Hub, pulls the two digest-pinned Doover images, and removes its temporary Docker CLI login file. The log then shows `Starting Doover Device Agent` and `Starting Doover App Controller`. The device becomes online in Doover after the Device Agent authenticates.
 
+## Connect Home Assistant entities to Doover
+
+Deploy the separate **Home Assistant Bridge** Doover app to show sensor readings and control lights.
+
+1. Generate a random bridge credential with at least 32 characters. For example, run `openssl rand -hex 32`.
+2. Open the **Doover Device** configuration.
+3. Turn on **Enable Home Assistant bridge**.
+4. Enter the generated value in **Home Assistant bridge credential**.
+5. Save the configuration, and restart **Doover Device**.
+6. Assign **Home Assistant Bridge** to this Raspberry Pi device in Doover.
+7. Enter the same credential in the Doover app configuration.
+8. Add the Home Assistant entity IDs that you want to show or control.
+
+See the [Home Assistant Bridge configuration guide](../home_assistant_bridge/README.md) for supported entity types and troubleshooting behavior.
+
 ## Choose a credential method
 
 Use the device auth token when the provisioning data contains `AUTH_TOKEN`. Copy it to **Device auth token**, and leave the OAuth fields blank.
@@ -38,9 +53,11 @@ Stopping **Doover Device** removes its managed Device Agent, App Controller, and
 
 Doover app containers connect to the Device Agent at `127.0.0.1:50051`. The Home Assistant app itself stays on a private container network. A small managed proxy exposes port `50051` only on the Home Assistant host's loopback interface, so other machines on the LAN cannot call the Device Agent API.
 
-Port `50051` must be free on host loopback. The app will stop with an error instead of exposing the Device Agent more broadly when it cannot start the proxy.
+When you enable the Home Assistant bridge, a second managed proxy exposes the restricted broker at `127.0.0.1:49192`. Only local host-network containers can connect. The broker also requires the configured bridge credential.
 
-The three managed service containers are removed during normal shutdown and replaced on every start. An abrupt host power loss or forced removal of the Home Assistant app can leave them running or stopped. Starting **Doover Device** again removes and replaces them. If you uninstall the app after a forced shutdown, remove containers labelled `io.doover.home-assistant.managed=true` through the host Docker daemon.
+Ports `50051` and, when enabled, `49192` must be free on host loopback. The app stops with an error instead of binding either service to a broader network interface.
+
+The managed service containers are removed during normal shutdown and replaced on every start. An abrupt host power loss or forced removal of the Home Assistant app can leave them running or stopped. Starting **Doover Device** again removes and replaces them. If you uninstall the app after a forced shutdown, remove containers labelled `io.doover.home-assistant.managed=true` through the host Docker daemon.
 
 ## Security and platform limits
 

@@ -29,6 +29,12 @@ configuration:
   data_static_ips:
     name: Static Data API IPs
     description: Optional comma-separated IP addresses used when DNS cannot reach the Data API.
+  homeassistant_bridge_enabled:
+    name: Enable Home Assistant bridge
+    description: Allow the Doover Home Assistant Bridge app to read supported entities and control lights through a restricted local API.
+  homeassistant_bridge_token:
+    name: Home Assistant bridge credential
+    description: A random value of at least 32 characters. Enter the same value in the Doover Home Assistant Bridge app configuration.
   debug:
     name: Debug logging
     description: Log extra Device Agent diagnostics. Logs never include configured credentials.

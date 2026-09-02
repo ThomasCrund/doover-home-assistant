@@ -1,0 +1,296 @@
+{
+    "home_assistant_bridge": {
+        "name": "home_assistant_bridge",
+        "display_name": "Home Assistant Bridge",
+        "type": "DEV",
+        "visibility": "PUB",
+        "allow_many": false,
+        "description": "Show selected Home Assistant sensor readings in Doover and control selected lights.",
+        "long_description": "README.md",
+        "depends_on": [],
+        "organisation_id": null,
+        "image_name": "registry.doover.com/apps/home_assistant_bridge:main",
+        "build_args": "--platform linux/amd64,linux/arm64",
+        "key": null,
+        "config_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "$id": "",
+            "title": "$default",
+            "type": "object",
+            "properties": {
+                "bridge_token": {
+                    "title": "Home Assistant Bridge Credential",
+                    "x-name": "bridge_token",
+                    "x-hidden": false,
+                    "format": "password",
+                    "type": "string",
+                    "x-required": true,
+                    "description": "The same random value configured in the Home Assistant Doover Device app.",
+                    "x-position": 0
+                },
+                "poll_interval": {
+                    "title": "Polling Interval",
+                    "x-name": "poll_interval",
+                    "x-hidden": false,
+                    "type": [
+                        "number",
+                        "null"
+                    ],
+                    "x-required": false,
+                    "description": "Seconds between Home Assistant state reads.",
+                    "default": 2.0,
+                    "x-position": 1,
+                    "minimum": 1.0,
+                    "maximum": 300.0
+                },
+                "numeric_sensors": {
+                    "title": "Numeric Sensors",
+                    "x-name": "numeric_sensors",
+                    "x-hidden": false,
+                    "type": [
+                        "array",
+                        "null"
+                    ],
+                    "x-required": false,
+                    "default": [],
+                    "x-position": 2,
+                    "items": {
+                        "title": "Numeric Sensor",
+                        "x-name": "numeric_sensor",
+                        "x-hidden": false,
+                        "type": "object",
+                        "x-required": true,
+                        "properties": {
+                            "entity_id": {
+                                "title": "Entity ID",
+                                "x-name": "entity_id",
+                                "x-hidden": false,
+                                "type": "string",
+                                "x-required": true,
+                                "description": "Home Assistant entity ID, for example sensor.lounge_temperature.",
+                                "x-position": 1,
+                                "pattern": "^[a-z_]+\\.[a-z0-9_]+$"
+                            },
+                            "display_name": {
+                                "title": "Display Name",
+                                "x-name": "display_name",
+                                "x-hidden": false,
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "x-required": false,
+                                "description": "Optional label in Doover. The entity ID is used when blank.",
+                                "default": "",
+                                "x-position": 2
+                            },
+                            "units": {
+                                "title": "Units",
+                                "x-name": "units",
+                                "x-hidden": false,
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "x-required": false,
+                                "description": "Optional engineering units shown in Doover.",
+                                "default": "",
+                                "x-position": 3
+                            },
+                            "precision": {
+                                "title": "Decimal Places",
+                                "x-name": "precision",
+                                "x-hidden": false,
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ],
+                                "x-required": false,
+                                "default": 2,
+                                "x-position": 4,
+                                "minimum": 0,
+                                "maximum": 8
+                            }
+                        },
+                        "additionalElements": false,
+                        "required": [
+                            "entity_id"
+                        ],
+                        "x-collapsible": true,
+                        "x-defaultCollapsed": false
+                    },
+                    "maxItems": 100
+                },
+                "text_sensors": {
+                    "title": "Text Sensors",
+                    "x-name": "text_sensors",
+                    "x-hidden": false,
+                    "type": [
+                        "array",
+                        "null"
+                    ],
+                    "x-required": false,
+                    "default": [],
+                    "x-position": 3,
+                    "items": {
+                        "title": "Text Sensor",
+                        "x-name": "text_sensor",
+                        "x-hidden": false,
+                        "type": "object",
+                        "x-required": true,
+                        "properties": {
+                            "entity_id": {
+                                "title": "Entity ID",
+                                "x-name": "entity_id",
+                                "x-hidden": false,
+                                "type": "string",
+                                "x-required": true,
+                                "description": "Home Assistant entity ID, for example sensor.lounge_temperature.",
+                                "x-position": 1,
+                                "pattern": "^[a-z_]+\\.[a-z0-9_]+$"
+                            },
+                            "display_name": {
+                                "title": "Display Name",
+                                "x-name": "display_name",
+                                "x-hidden": false,
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "x-required": false,
+                                "description": "Optional label in Doover. The entity ID is used when blank.",
+                                "default": "",
+                                "x-position": 2
+                            }
+                        },
+                        "additionalElements": false,
+                        "required": [
+                            "entity_id"
+                        ],
+                        "x-collapsible": true,
+                        "x-defaultCollapsed": false
+                    },
+                    "maxItems": 100
+                },
+                "binary_sensors": {
+                    "title": "Binary Sensors",
+                    "x-name": "binary_sensors",
+                    "x-hidden": false,
+                    "type": [
+                        "array",
+                        "null"
+                    ],
+                    "x-required": false,
+                    "default": [],
+                    "x-position": 4,
+                    "items": {
+                        "title": "Binary Sensor",
+                        "x-name": "binary_sensor",
+                        "x-hidden": false,
+                        "type": "object",
+                        "x-required": true,
+                        "properties": {
+                            "entity_id": {
+                                "title": "Entity ID",
+                                "x-name": "entity_id",
+                                "x-hidden": false,
+                                "type": "string",
+                                "x-required": true,
+                                "description": "Home Assistant entity ID, for example sensor.lounge_temperature.",
+                                "x-position": 1,
+                                "pattern": "^[a-z_]+\\.[a-z0-9_]+$"
+                            },
+                            "display_name": {
+                                "title": "Display Name",
+                                "x-name": "display_name",
+                                "x-hidden": false,
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "x-required": false,
+                                "description": "Optional label in Doover. The entity ID is used when blank.",
+                                "default": "",
+                                "x-position": 2
+                            }
+                        },
+                        "additionalElements": false,
+                        "required": [
+                            "entity_id"
+                        ],
+                        "x-collapsible": true,
+                        "x-defaultCollapsed": false
+                    },
+                    "maxItems": 100
+                },
+                "lights": {
+                    "title": "Lights",
+                    "x-name": "lights",
+                    "x-hidden": false,
+                    "type": [
+                        "array",
+                        "null"
+                    ],
+                    "x-required": false,
+                    "default": [],
+                    "x-position": 5,
+                    "items": {
+                        "title": "Light",
+                        "x-name": "light",
+                        "x-hidden": false,
+                        "type": "object",
+                        "x-required": true,
+                        "properties": {
+                            "entity_id": {
+                                "title": "Entity ID",
+                                "x-name": "entity_id",
+                                "x-hidden": false,
+                                "type": "string",
+                                "x-required": true,
+                                "description": "Home Assistant entity ID, for example sensor.lounge_temperature.",
+                                "x-position": 1,
+                                "pattern": "^[a-z_]+\\.[a-z0-9_]+$"
+                            },
+                            "display_name": {
+                                "title": "Display Name",
+                                "x-name": "display_name",
+                                "x-hidden": false,
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "x-required": false,
+                                "description": "Optional label in Doover. The entity ID is used when blank.",
+                                "default": "",
+                                "x-position": 2
+                            }
+                        },
+                        "additionalElements": false,
+                        "required": [
+                            "entity_id"
+                        ],
+                        "x-collapsible": true,
+                        "x-defaultCollapsed": false
+                    },
+                    "maxItems": 100
+                }
+            },
+            "additionalElements": true,
+            "required": [
+                "bridge_token"
+            ]
+        },
+        "ui_schema": {
+            "displayString": "$config.app().APP_DISPLAY_NAME",
+            "hidden": "$config.app().interpreter_hidden:boolean:false",
+            "fullWidth": "$config.app().interpreter_full_width:boolean:false",
+            "position": "$config.app().dv_app_position:number:100",
+            "icon": "home",
+            "colour": null,
+            "defaultOpen": "$config.app().dv_app_default_open:boolean",
+            "type": "uiApplication",
+            "name": "$config.app().APP_KEY",
+            "children": {}
+        }
+    }
+}

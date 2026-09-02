@@ -7,12 +7,15 @@ The app runs two Doover services:
 - The Device Agent connects the host to Doover and provides its gRPC API only on host loopback port `50051`.
 - The App Controller receives deployments from Doover and runs their containers on the Home Assistant host.
 
+The optional Home Assistant bridge adds a restricted local broker. Deploy the [`home_assistant_bridge`](home_assistant_bridge/README.md) Doover app to show selected sensors in Doover and control lights.
+
 See [the Doover Device app instructions](doover_device/DOCS.md) for installation and configuration.
 
 ## Repository layout
 
 ```text
 doover_device/       Home Assistant app
+home_assistant_bridge/ Doover device app for Home Assistant entities
 scripts/verify.sh    Local verification entry point
 tests/               Configuration, metadata, and process lifecycle tests
 repository.yaml      Home Assistant app repository metadata
@@ -33,7 +36,7 @@ To verify the target images, build both supported architectures:
 ```sh
 docker buildx build \
   --platform linux/amd64,linux/arm64 \
-  --build-arg BUILD_VERSION=0.2.1 \
+  --build-arg BUILD_VERSION=0.3.0 \
   --build-arg BUILD_ARCH=multiarch \
   --output type=cacheonly \
   doover_device
