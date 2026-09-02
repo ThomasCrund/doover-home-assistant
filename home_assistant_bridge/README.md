@@ -63,8 +63,8 @@ uv run export-ui
 uv run pytest
 ```
 
-Register the app with Doover before its first release. Replace the `key` value in `doover_config.json` with the assigned application key, then publish the multi-architecture image with the Doover CLI:
+Set `organisation_id` in `doover_config.json` to the owning Doover organisation. The first publish registers the globally unique application name; later publishes update the same application. Publish the multi-architecture image and release with the Doover CLI:
 
 ```sh
-doover app publish
+doover app publish --build --tag 0.1.0
 ```

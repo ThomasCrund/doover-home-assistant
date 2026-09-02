@@ -8,10 +8,9 @@
         "description": "Show selected Home Assistant sensor readings in Doover and control selected lights.",
         "long_description": "README.md",
         "depends_on": [],
-        "organisation_id": null,
+        "organisation_id": "219709399722157827",
         "image_name": "registry.doover.com/apps/home_assistant_bridge:main",
         "build_args": "--platform linux/amd64,linux/arm64",
-        "key": null,
         "config_schema": {
             "$schema": "https://json-schema.org/draft/2020-12/schema",
             "$id": "",
